@@ -1,0 +1,2 @@
+[console_scripts]
+content-bot = content_discovery_bot.cli:app

@@ -14,7 +14,7 @@ from .database import DatabaseManager
 from .workflow import ContentPipeline
 
 app = typer.Typer(help="内容选题采集与公众号文章生成系统")
-console = Console()
+console = Console(highlight=False, emoji=False, legacy_windows=False)
 
 
 @app.command()
@@ -38,9 +38,9 @@ def init(
     
     asyncio.run(_init())
     
-    console.print(f"[green]✓[/green] 数据目录: {config.data_dir}")
-    console.print(f"[green]✓[/green] 草稿目录: {config.drafts_dir}")
-    console.print(f"[green]✓[/green] 数据库: {config.db_path}")
+    console.print(f"[green]OK[/green] 数据目录: {config.data_dir}")
+    console.print(f"[green]OK[/green] 草稿目录: {config.drafts_dir}")
+    console.print(f"[green]OK[/green] 数据库: {config.db_path}")
     console.print("[bold green]初始化完成！[/bold green]")
 
 
@@ -299,7 +299,7 @@ def generate(
         # 保存
         draft_id = await generator.save_draft(draft, 0)
         
-        console.print(f"[green]✓[/green] 文章已生成: drafts/draft_{draft_id}.md")
+        console.print(f"[green]OK[/green] 文章已生成: drafts/draft_{draft_id}.md")
         console.print(f"[dim]预览前500字:[/dim]")
         console.print(draft.content[:500] + "...")
     
