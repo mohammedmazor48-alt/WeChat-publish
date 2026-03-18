@@ -1,0 +1,79 @@
+system:
+  name: "ContentDiscoveryBot"
+  version: "1.0.0"
+  log_level: "INFO"
+  data_dir: "./data"
+  drafts_dir: "./drafts"
+
+database:
+  path: "./data/content_discovery.db"
+  backup_interval_days: 7
+
+llm:
+  provider: "anthropic"  # openai or anthropic
+  model: "claude-sonnet-4-6"
+  api_key: "${ANTHROPIC_API_KEY}"
+  max_tokens: 4000
+  temperature: 0.7
+
+sources:
+  reddit:
+    enabled: true
+    client_id: "${REDDIT_CLIENT_ID}"
+    client_secret: "${REDDIT_CLIENT_SECRET}"
+    subreddits:
+      - name: "DepthHub"
+        min_score: 100
+        category: "深度思考"
+        check_interval_hours: 6
+      - name: "FoodForThought"
+        min_score: 50
+        category: "认知思维"
+        check_interval_hours: 6
+      - name: "changemyview"
+        min_score: 200
+        category: "观点碰撞"
+        check_interval_hours: 12
+      - name: "AskHistorians"
+        min_score: 500
+        category: "历史洞察"
+        check_interval_hours: 24
+
+  hackernews:
+    enabled: true
+    min_score: 100
+    check_interval_hours: 6
+
+  rss:
+    enabled: true
+    feeds:
+      - name: "即刻精选"
+        url: "https://rsshub.app/jike/topic/selected"
+        category: "社交热点"
+        check_interval_hours: 4
+      - name: "阮一峰网络日志"
+        url: "http://www.ruanyifeng.com/blog/atom.xml"
+        category: "科技观察"
+        check_interval_hours: 24
+      - name: "槽边往事"
+        url: "https://feeds.feedburner.com/caitou"
+        category: "社会观察"
+        check_interval_hours: 12
+
+analyzer:
+  simhash_threshold: 3
+  min_total_score: 25
+  deep_mode_threshold: 35
+
+generator:
+  style_dna_path: "references/style-dna.md"
+  output_format: "markdown"
+
+scheduler:
+  daily_run_time: "08:00"
+  timezone: "Asia/Shanghai"
+
+notifications:
+  enabled: false
+  type: "discord"
+  webhook_url: "${DISCORD_WEBHOOK_URL}"
