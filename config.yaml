@@ -10,9 +10,10 @@ database:
   backup_interval_days: 7
 
 llm:
-  provider: "anthropic"  # openai or anthropic
-  model: "claude-sonnet-4-6"
-  api_key: "${ANTHROPIC_API_KEY}"
+  provider: "kimi"  # openai / anthropic / kimi
+  model: "kimi-k2-0711-preview"
+  api_key: "${KIMI_API_KEY}"
+  base_url: "https://api.moonshot.cn/v1"
   max_tokens: 4000
   temperature: 0.7
 

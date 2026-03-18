@@ -32,6 +32,8 @@ class LLMClient:
             result = await self._call_openai(prompt, max_tokens)
         elif self.provider == "anthropic":
             result = await self._call_anthropic(prompt, max_tokens)
+        elif self.provider == "kimi":
+            result = await self._call_kimi(prompt, max_tokens)
         else:
             raise ValueError(f"不支持的LLM提供商: {self.provider}")
         
@@ -69,6 +71,27 @@ class LLMClient:
             ]
         )
         return response.content[0].text
+
+    async def _call_kimi(self, prompt: str, max_tokens: int = None) -> str:
+        """调用Kimi API (Moonshot AI)"""
+        import openai
+        
+        # Kimi使用OpenAI兼容接口
+        client = openai.AsyncOpenAI(
+            api_key=self.config.api_key,
+            base_url=self.config.base_url or "https://api.moonshot.cn/v1"
+        )
+        
+        response = await client.chat.completions.create(
+            model=self.config.model or "kimi-k2-0711-preview",
+            messages=[
+                {"role": "system", "content": "你是一个专业的内容分析师，擅长评估社交媒体选题的价值。"},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=max_tokens or self.config.max_tokens,
+            temperature=self.config.temperature
+        )
+        return response.choices[0].message.content
 
 
 class TopicAnalyzer:

@@ -63,9 +63,10 @@ class SourcesConfig(BaseModel):
 
 
 class LLMConfig(BaseModel):
-    provider: str = "anthropic"
-    model: str = "claude-sonnet-4-6"
+    provider: str = "kimi"  # openai / anthropic / kimi
+    model: str = "kimi-k2-0711-preview"  # 默认使用Kimi
     api_key: str = ""
+    base_url: str = ""  # 自定义API基础URL（如Kimi）
     max_tokens: int = 4000
     temperature: float = 0.7
 
