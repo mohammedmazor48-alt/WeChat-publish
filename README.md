@@ -1,9 +1,7 @@
 # WeChat Publish / Content Discovery Bot
 
-一个面向微信公众号内容生产的工作流仓库：
-既能做**选题采集与文章生成**，也已经具备一套可落地的 **公众号草稿发布系统**。
-
-当前这套仓库最实用的部分，是已经跑通了：
+一个可落地的 **微信公众号草稿发布系统**，同时保留内容采集与文章生成能力。  
+当前仓库最核心、最稳定、最适合直接使用的部分，是这套发布链路：
 
 - 单篇文章配置化发布
 - HTML 正文图片自动上传替换
@@ -13,65 +11,27 @@
 
 ---
 
-## 仓库当前重点能力
+## 10 秒看懂这个仓库
 
-### 1. 微信公众号发布系统
+如果你只关心“怎么发公众号草稿”，只需要记住两条命令：
 
-已支持：
-
-- 封面图上传
-- 自动扫描 HTML 中的本地图片并上传到公众号
-- 自动将图片路径替换成公众号 URL
-- 推送文章到公众号草稿箱
-- 单篇 `--config` 发布
-- 队列批量发布
-- `ready / scheduled / published` 状态流转
-- 生成发布日志（JSONL + CSV）
-
-### 2. 内容采集与文章生成
-
-仓库仍保留原有内容采集/分析能力，包括：
-
-- 多源选题采集
-- LLM 分析与生成
-- 草稿生产
-- 配图生成
-
-但如果你是第一次进入这个仓库，建议优先看发布链路，而不是旧的采集能力说明。
-
----
-
-## 推荐阅读顺序
-
-如果你是来使用这套系统，建议按下面顺序看：
-
-1. `BATCH_PUBLISH_MANUAL.md`  
-   批量定期发文使用手册
-2. `drafts/README_BATCH_PUBLISH.md`  
-   队列目录结构说明
-3. `publish_to_wechat.py`  
-   单篇配置化发布脚本
-4. `publish_ready_queue.py`  
-   批量 / 定时队列发布脚本
-
----
-
-## 快速开始
-
-### 1）安装依赖
+### 单篇发布
 
 ```bash
-cd content-discovery-bot
-pip install -r requirements.txt
+python publish_to_wechat.py --config drafts/queue/your-article/meta.json --auto
 ```
 
-### 2）配置环境变量
+### 批量发布队列中 ready / 到时 scheduled 的文章
 
-确保 `.env` 中有公众号配置。
+```bash
+python publish_ready_queue.py
+```
 
-### 3）准备一篇文章目录
+---
 
-推荐目录结构：
+## 最短上手路径
+
+### 第 1 步：准备一篇文章目录
 
 ```text
 drafts/
@@ -84,49 +44,9 @@ drafts/
       illustration_2.jpg
 ```
 
-### 4）单篇发布
+### 第 2 步：写 `meta.json`
 
-```bash
-python publish_to_wechat.py --config drafts/queue/2026-03-25-single-agent-value/meta.json --auto
-```
-
-### 5）批量发布 ready / scheduled 文章
-
-```bash
-python publish_ready_queue.py
-```
-
----
-
-## 目录结构（当前重点）
-
-```text
-content-discovery-bot/
-├── publish_to_wechat.py           # 单篇公众号发布脚本
-├── publish_ready_queue.py         # 批量队列发布器
-├── BATCH_PUBLISH_MANUAL.md        # 使用手册
-├── WECHAT_PUBLISH_WORKFLOW.md     # 发布工作流说明
-├── publish_log.jsonl              # 结构化发布日志
-├── publish_log.csv                # 表格发布日志
-├── drafts/
-│   ├── README_BATCH_PUBLISH.md    # 队列目录说明
-│   └── queue/
-│       ├── _template/             # 模板目录
-│       └── 2026-03-20-five-dynasties/
-│           ├── article.html
-│           ├── cover.jpg
-│           ├── meta.json
-│           └── illustration_*.jpg
-├── src/                           # 原有内容采集/生成代码
-├── data/                          # 数据文件
-└── references/                    # 参考资料
-```
-
----
-
-## `meta.json` 示例
-
-### ready（立即可发）
+#### 立即可发
 
 ```json
 {
@@ -140,7 +60,7 @@ content-discovery-bot/
 }
 ```
 
-### scheduled（定时进入发布队列）
+#### 定时进入发布队列
 
 ```json
 {
@@ -154,15 +74,83 @@ content-discovery-bot/
 }
 ```
 
+### 第 3 步：执行发布
+
+#### 发单篇
+
+```bash
+python publish_to_wechat.py --config drafts/queue/2026-03-25-single-agent-value/meta.json --auto
+```
+
+#### 扫描整个队列
+
+```bash
+python publish_ready_queue.py
+```
+
 ---
 
-## 日志文件
+## 这套系统会自动帮你做什么
 
-系统现在会自动写两类日志：
+你不需要手工上传正文图片。
+
+系统会自动：
+
+1. 读取 `article.html`
+2. 扫描所有 `<img src="...">`
+3. 跳过远程 URL 和 `data:` 图片
+4. 上传本地图片到公众号
+5. 替换 HTML 中图片地址为公众号 URL
+6. 推送到公众号草稿箱
+7. 写入发布日志
+
+---
+
+## 典型工作流
+
+```text
+准备文章目录
+   ↓
+填写 meta.json
+   ↓
+设置 status=ready 或 scheduled
+   ↓
+运行单篇发布 / 批量发布器
+   ↓
+公众号草稿箱生成草稿
+   ↓
+记录 media_id / published_at / 发布日志
+```
+
+---
+
+## 仓库当前重点文件
+
+```text
+content-discovery-bot/
+├── publish_to_wechat.py           # 单篇公众号发布脚本
+├── publish_ready_queue.py         # 批量队列发布器
+├── BATCH_PUBLISH_MANUAL.md        # 完整使用手册
+├── WECHAT_PUBLISH_WORKFLOW.md     # 发布工作流说明
+├── publish_log.jsonl              # 结构化发布日志
+├── publish_log.csv                # 表格发布日志
+├── drafts/
+│   ├── README_BATCH_PUBLISH.md    # 队列目录说明
+│   └── queue/
+│       ├── _template/             # 模板目录
+│       └── 2026-03-20-five-dynasties/
+└── src/                           # 原有内容采集 / 分析 / 生成代码
+```
+
+---
+
+## 发布日志
+
+系统会自动生成两类日志：
 
 ### `publish_log.jsonl`
-- 一行一条发布记录
-- 适合程序处理
+- 一行一条记录
+- 适合程序读取
 
 ### `publish_log.csv`
 - 可直接用 Excel 打开
@@ -184,19 +172,43 @@ content-discovery-bot/
 
 ---
 
-## 当前适用场景
+## 推荐阅读顺序
 
-这套仓库目前最适合：
+如果你要真正接手这套系统，建议按下面顺序看：
 
-- 单篇公众号文章推草稿
-- 多篇内容排队入草稿箱
-- 按 `schedule` 定时进入发布流程
-- 对发布历史做留痕和回查
-- 做系列化内容生产
+1. `BATCH_PUBLISH_MANUAL.md`
+2. `drafts/README_BATCH_PUBLISH.md`
+3. `publish_to_wechat.py`
+4. `publish_ready_queue.py`
 
 ---
 
-## 下一步可扩展方向
+## 当前适用场景
+
+这套仓库现在最适合：
+
+- 单篇公众号文章推草稿
+- 多篇内容批量排队入草稿箱
+- 按 `schedule` 做定时发布
+- 做系列化内容生产
+- 对发布历史做留痕和回查
+
+---
+
+## 仓库里的另一层能力
+
+仓库仍保留原有内容采集 / 分析 / 文章生成能力，包括：
+
+- 多源选题采集
+- LLM 分析与生成
+- 草稿生产
+- 配图生成
+
+但如果你是第一次进入这个仓库，建议优先使用已经跑通的 **微信发布链路**。
+
+---
+
+## 后续可继续扩展
 
 如果继续往前做，优先级建议是：
 
