@@ -1,0 +1,9 @@
+{
+  "title": "Scheduled Demo",
+  "author": "深蓝",
+  "digest": "这是一个未来时间的调度测试样例。",
+  "html": "article.html",
+  "cover": "cover.jpg",
+  "schedule": "2099-03-21 09:00",
+  "status": "scheduled"
+}
