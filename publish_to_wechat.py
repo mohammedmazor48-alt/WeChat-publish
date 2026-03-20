@@ -11,6 +11,7 @@ import os
 import sys
 import requests
 import json
+import re
 from pathlib import Path
 
 # 读取环境变量
@@ -93,12 +94,71 @@ class WeChatPublisher:
         except Exception as e:
             print(f"[ERR] 上传错误: {e}")
             return None
+
+    def upload_content_image(self, image_path):
+        """上传正文图片，返回微信可用的图片 URL"""
+        if not self.access_token:
+            print("[ERR] 未获取access_token")
+            return None
+
+        url = f"https://api.weixin.qq.com/cgi-bin/media/uploadimg?access_token={self.access_token}"
+        image_path = Path(image_path)
+
+        try:
+            with open(image_path, 'rb') as f:
+                files = {'media': (image_path.name, f, 'image/jpeg')}
+                response = requests.post(url, files=files, timeout=60)
+                data = response.json()
+
+                if 'url' in data:
+                    print(f"[OK] 正文图片上传成功: {image_path.name} -> {data['url']}")
+                    return data['url']
+
+                print(f"[ERR] 正文图片上传失败 {image_path.name}: {data}")
+                return None
+        except Exception as e:
+            print(f"[ERR] 正文图片上传错误 {image_path.name}: {e}")
+            return None
+
+    def upload_all_content_images(self, image_dir):
+        """扫描并上传正文插图，返回 {filename: url} 映射"""
+        image_dir = Path(image_dir)
+        image_map = {}
+
+        for i in range(1, 10):
+            image_path = image_dir / f"illustration_{i}.jpg"
+            if not image_path.exists():
+                continue
+
+            image_url = self.upload_content_image(image_path)
+            if image_url:
+                image_map[image_path.name] = image_url
+            else:
+                print(f"[WARN] 跳过未成功上传的正文图片: {image_path.name}")
+
+        print(f"[OK] 正文图片上传完成，共成功 {len(image_map)} 张")
+        return image_map
+
+    def process_html_with_images(self, html_path, image_map):
+        """读取 HTML 并将本地正文图片路径替换为微信图片 URL"""
+        html_path = Path(html_path)
+        html_content = html_path.read_text(encoding='utf-8')
+
+        for filename, image_url in image_map.items():
+            patterns = [
+                rf'src="{re.escape(filename)}"',
+                rf'src="\./{re.escape(filename)}"'
+            ]
+            for pattern in patterns:
+                html_content = re.sub(pattern, f'src="{image_url}"', html_content)
+
+        return html_content
     
     def add_draft(self, title, content, thumb_media_id, author="深蓝", digest=""):
         """添加草稿到公众号"""
         if not self.access_token:
             print("[ERR] 未获取access_token")
-            return False
+            return None
         
         url = f"https://api.weixin.qq.com/cgi-bin/draft/add?access_token={self.access_token}"
         
@@ -130,13 +190,13 @@ class WeChatPublisher:
             if 'media_id' in data:
                 print("[OK] 草稿创建成功!")
                 print(f"  Media ID: {data['media_id']}")
-                return True
+                return data['media_id']
             else:
                 print(f"[ERR] 草稿创建失败: {data}")
-                return False
+                return None
         except Exception as e:
             print(f"[ERR] 请求错误: {e}")
-            return False
+            return None
 
 def main():
     """主函数"""
@@ -151,8 +211,9 @@ def main():
     
     # 文件路径
     base_dir = Path(__file__).parent
-    cover_path = base_dir / "drafts" / "cover_final.jpg"
-    html_path = base_dir / "drafts" / "article_final.html"
+    drafts_dir = base_dir / "drafts"
+    cover_path = drafts_dir / "cover_five_dynasties.jpg"
+    html_path = drafts_dir / "article_five_dynasties.html"
     
     # 检查文件
     if not cover_path.exists():
@@ -163,16 +224,13 @@ def main():
         print(f"[ERR] 文章HTML不存在: {html_path}")
         return
     
-    # 读取HTML内容
-    with open(html_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-    
     print("\n文章信息:")
     print(f"  标题: 信任是场无限游戏，而我们都在透支未来")
     print(f"  作者: 深蓝")
     print(f"  封面: {cover_path}")
+    raw_content = html_path.read_text(encoding='utf-8')
     print(f"  HTML: {html_path}")
-    print(f"  字数: {len(content)} 字符")
+    print(f"  字数: {len(raw_content)} 字符")
     
     # 确认推送 (自动模式跳过确认)
     auto_mode = '--auto' in sys.argv
@@ -188,30 +246,37 @@ def main():
     publisher = WeChatPublisher(APPID, APPSECRET)
     
     # 获取access_token
-    print("\n[1/3] 获取Access Token...")
+    print("\n[1/4] 获取Access Token...")
     if not publisher.get_access_token():
         return
     
     # 上传封面图
-    print("\n[2/3] 上传封面图...")
+    print("\n[2/4] 上传封面图...")
     thumb_media_id = publisher.upload_material(str(cover_path))
     if not thumb_media_id:
         print("[ERR] 封面上传失败，无法继续")
         return
+
+    # 上传正文图片并处理 HTML
+    print("\n[3/4] 上传正文图片并处理 HTML...")
+    image_map = publisher.upload_all_content_images(drafts_dir)
+    content = publisher.process_html_with_images(html_path, image_map)
+    print(f"[OK] HTML 处理完成，成功替换 {len(image_map)} 张正文图片")
     
     # 添加草稿
-    print("\n[3/3] 创建草稿...")
-    success = publisher.add_draft(
-        title="信任是场无限游戏，而我们都在透支未来",
+    print("\n[4/4] 创建草稿...")
+    draft_media_id = publisher.add_draft(
+        title="房产行业，正在经历一场\"五代十国\"",
         content=content,
         thumb_media_id=thumb_media_id,
         author="深蓝",
-        digest="从学术期刊300年演化史说起：100次履约建立的信任，1次违约就能归零。"
+        digest="从乱世到信用重建：五代十国的乱象正在房产行业重演，而宋朝的重建之路或许就是我们的出路。"
     )
     
-    if success:
+    if draft_media_id:
         print("\n" + "=" * 50)
         print("[OK] 推送成功!")
+        print(f"[OK] 新草稿 Media ID: {draft_media_id}")
         print("=" * 50)
         print("\n请前往公众号后台查看:")
         print("  1. 登录 https://mp.weixin.qq.com")
