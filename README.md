@@ -1,204 +1,221 @@
-# Content Discovery Bot
+# WeChat Publish / Content Discovery Bot
 
-社媒爆款选题采集与公众号文章生成系统
+一个面向微信公众号内容生产的工作流仓库：
+既能做**选题采集与文章生成**，也已经具备一套可落地的 **公众号草稿发布系统**。
 
-## 功能特性
+当前这套仓库最实用的部分，是已经跑通了：
 
-- 🔍 **多源采集**: Reddit、Hacker News、RSS订阅
-- 🧠 **AI分析**: LLM评估选题价值，智能评分
-- ✍️ **文章生成**: 轻量/深度双模式，支持风格DNA
-- 🔄 **自动调度**: 定时运行，无需人工干预
-- 🖥️ **Web界面**: Streamlit可视化操作台
-- 📊 **数据分析**: 运行日志和统计报告
+- 单篇文章配置化发布
+- HTML 正文图片自动上传替换
+- 批量队列发布
+- `schedule` 定时发布逻辑
+- 发布日志总表
+
+---
+
+## 仓库当前重点能力
+
+### 1. 微信公众号发布系统
+
+已支持：
+
+- 封面图上传
+- 自动扫描 HTML 中的本地图片并上传到公众号
+- 自动将图片路径替换成公众号 URL
+- 推送文章到公众号草稿箱
+- 单篇 `--config` 发布
+- 队列批量发布
+- `ready / scheduled / published` 状态流转
+- 生成发布日志（JSONL + CSV）
+
+### 2. 内容采集与文章生成
+
+仓库仍保留原有内容采集/分析能力，包括：
+
+- 多源选题采集
+- LLM 分析与生成
+- 草稿生产
+- 配图生成
+
+但如果你是第一次进入这个仓库，建议优先看发布链路，而不是旧的采集能力说明。
+
+---
+
+## 推荐阅读顺序
+
+如果你是来使用这套系统，建议按下面顺序看：
+
+1. `BATCH_PUBLISH_MANUAL.md`  
+   批量定期发文使用手册
+2. `drafts/README_BATCH_PUBLISH.md`  
+   队列目录结构说明
+3. `publish_to_wechat.py`  
+   单篇配置化发布脚本
+4. `publish_ready_queue.py`  
+   批量 / 定时队列发布脚本
+
+---
 
 ## 快速开始
 
-### 1. 安装依赖
+### 1）安装依赖
 
 ```bash
-# 克隆项目
-git clone <your-repo>
 cd content-discovery-bot
-
-# 创建虚拟环境
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# 安装依赖
 pip install -r requirements.txt
 ```
 
-### 2. 配置环境变量
+### 2）配置环境变量
+
+确保 `.env` 中有公众号配置。
+
+### 3）准备一篇文章目录
+
+推荐目录结构：
+
+```text
+drafts/
+  queue/
+    2026-03-25-single-agent-value/
+      article.html
+      cover.jpg
+      meta.json
+      illustration_1.jpg
+      illustration_2.jpg
+```
+
+### 4）单篇发布
 
 ```bash
-cp .env.example .env
-# 编辑 .env 填入API密钥
+python publish_to_wechat.py --config drafts/queue/2026-03-25-single-agent-value/meta.json --auto
 ```
 
-`.env` 文件示例:
-```
-OPENAI_API_KEY=your_openai_key
-ANTHROPIC_API_KEY=your_anthropic_key
-```
-
-### 3. 初始化系统
+### 5）批量发布 ready / scheduled 文章
 
 ```bash
-# 初始化数据库和目录
-content-bot init
+python publish_ready_queue.py
 ```
 
-### 4. 运行工作流
+---
 
-```bash
-# 手动运行一次
-content-bot run
+## 目录结构（当前重点）
 
-# 或启动定时调度
-content-bot schedule start
-```
-
-### 5. 启动Web界面
-
-```bash
-streamlit run src/content_discovery_bot/app.py
-```
-
-## CLI命令
-
-| 命令 | 说明 | 示例 |
-|------|------|------|
-| `init` | 初始化数据库和目录 | `content-bot init` |
-| `run` | 运行工作流 | `content-bot run --mode full` |
-| `schedule` | 管理定时调度 | `content-bot schedule start` |
-| `drafts` | 查看草稿 | `content-bot drafts --status pending` |
-| `review` | 审核草稿 | `content-bot review 123 approve` |
-| `report` | 生成报告 | `content-bot report --days 7` |
-| `generate` | 手动生成文章 | `content-bot generate "主题" --mode deep` |
-
-## 工作流说明
-
-### 数据采集流程
-1. **采集**: 从各平台获取最新内容
-2. **去重**: SimHash算法去重
-3. **分析**: LLM评估选题价值（热度、深度、争议性等）
-4. **排序**: 多维度加权评分，选出Top选题
-5. **生成**: 根据选题自动或手动生成文章
-
-### 生成模式
-
-**轻量模式** (lightweight)
-- 适合常规选题
-- 模板填充 + LLM润色
-- 成本低，速度快
-
-**深度模式** (deep)
-- 适合重要选题
-- LLM原生生成
-- 质量高，成本较高
-
-## 项目结构
-
-```
+```text
 content-discovery-bot/
-├── config.yaml              # 配置文件
-├── .env                     # 环境变量
-├── requirements.txt         # 依赖列表
-├── pyproject.toml          # 项目元数据
-├── references/
-│   └── style-dna.md        # 写作风格DNA
-├── src/
-│   └── content_discovery_bot/
-│       ├── __init__.py
-│       ├── config.py        # 配置加载
-│       ├── models.py        # 数据模型
-│       ├── database.py      # 数据库操作
-│       ├── collector.py     # 内容采集
-│       ├── analyzer.py      # 选题分析
-│       ├── generator.py     # 文章生成
-│       ├── workflow.py      # 工作流管道
-│       ├── cli.py           # 命令行界面
-│       └── app.py           # Web界面
-└── data/                    # 数据目录
-    ├── content_discovery.db # SQLite数据库
-    └── drafts/              # 文章草稿
+├── publish_to_wechat.py           # 单篇公众号发布脚本
+├── publish_ready_queue.py         # 批量队列发布器
+├── BATCH_PUBLISH_MANUAL.md        # 使用手册
+├── WECHAT_PUBLISH_WORKFLOW.md     # 发布工作流说明
+├── publish_log.jsonl              # 结构化发布日志
+├── publish_log.csv                # 表格发布日志
+├── drafts/
+│   ├── README_BATCH_PUBLISH.md    # 队列目录说明
+│   └── queue/
+│       ├── _template/             # 模板目录
+│       └── 2026-03-20-five-dynasties/
+│           ├── article.html
+│           ├── cover.jpg
+│           ├── meta.json
+│           └── illustration_*.jpg
+├── src/                           # 原有内容采集/生成代码
+├── data/                          # 数据文件
+└── references/                    # 参考资料
 ```
 
-## 配置说明
+---
 
-### 数据源配置
+## `meta.json` 示例
 
-编辑 `config.yaml`:
+### ready（立即可发）
 
-```yaml
-sources:
-  hackernews:
-    enabled: true
-    min_score: 100
-    check_interval_hours: 6
-  
-  rss:
-    enabled: true
-    feeds:
-      - name: "即刻精选"
-        url: "https://rsshub.app/jike/topic/selected"
-        category: "社交热点"
-        check_interval_hours: 4
+```json
+{
+  "title": "文章标题",
+  "author": "深蓝",
+  "digest": "文章摘要",
+  "html": "article.html",
+  "cover": "cover.jpg",
+  "schedule": "2026-03-25 09:00",
+  "status": "ready"
+}
 ```
 
-### 分析器配置
+### scheduled（定时进入发布队列）
 
-```yaml
-analyzer:
-  min_total_score: 25        # 通过阈值
-  deep_mode_threshold: 35    # 深度模式阈值
-  simhash_threshold: 3       # 去重阈值
+```json
+{
+  "title": "文章标题",
+  "author": "深蓝",
+  "digest": "文章摘要",
+  "html": "article.html",
+  "cover": "cover.jpg",
+  "schedule": "2026-03-25 09:00",
+  "status": "scheduled"
+}
 ```
 
-### LLM配置
+---
 
-```yaml
-llm:
-  provider: "openai"         # 或 "anthropic"
-  model: "gpt-4"
-  api_key: "${OPENAI_API_KEY}"
-  max_tokens: 4000
-  temperature: 0.7
-```
+## 日志文件
 
-## 开发计划
+系统现在会自动写两类日志：
 
-### Phase 1: MVP (已完成)
-- [x] 基础架构搭建
-- [x] HN + RSS采集
-- [x] LLM选题分析
-- [x] 文章生成功能
-- [x] CLI界面
-- [x] Web界面
+### `publish_log.jsonl`
+- 一行一条发布记录
+- 适合程序处理
 
-### Phase 2: 优化 (待实现)
-- [ ] Reddit集成
-- [ ] 评分模型训练
-- [ ] 反馈闭环
-- [ ] 自动化发布
-- [ ] 监控告警
+### `publish_log.csv`
+- 可直接用 Excel 打开
+- 适合人工查看发布历史
 
-### Phase 3: 扩展 (未来)
-- [ ] 多账号支持
-- [ ] 机器学习模型
-- [ ] 多语言支持
-- [ ] 分布式部署
+记录字段包括：
 
-## 注意事项
+- `logged_at`
+- `mode`
+- `status`
+- `title`
+- `author`
+- `digest`
+- `html`
+- `cover`
+- `config_path`
+- `media_id`
+- `error`
 
-1. **API成本**: LLM调用会产生费用，建议设置预算上限
-2. **合规性**: 仅使用官方API或公开RSS，遵守平台规则
-3. **内容版权**: 生成文章为原创内容，参考内容仅作选题参考
+---
 
-## License
+## 当前适用场景
 
-MIT License
+这套仓库目前最适合：
+
+- 单篇公众号文章推草稿
+- 多篇内容排队入草稿箱
+- 按 `schedule` 定时进入发布流程
+- 对发布历史做留痕和回查
+- 做系列化内容生产
+
+---
+
+## 下一步可扩展方向
+
+如果继续往前做，优先级建议是：
+
+1. 接入 Windows 定时任务 / cron
+2. 增加标题 / 摘要校验器
+3. 增加多账号配置层
+4. 增加统一发布历史面板
+
+---
+
+## 相关文档
+
+- `BATCH_PUBLISH_MANUAL.md`
+- `WECHAT_PUBLISH_WORKFLOW.md`
+- `drafts/README_BATCH_PUBLISH.md`
+- `RELEASE_README.md`
+
+---
 
 ## 作者
 
-深蓝 - 深蓝的会客厅
+深蓝 · 深蓝的会客厅
